@@ -2,6 +2,13 @@ const express = require('express');
 const PORT = process.env.PORT || 3001
 const app = express();
 const { animals } = require('./data/animals')
+const fs = require('fs');
+const path = require('path');
+
+// parse incoming string or array data
+app.use(express.urlencoded({ extended: true }));
+// parse incoming JSON data
+app.use(express.json());
 
 function filterByQuery(query, animalsArray) {
     let personalityTraitsArray = [];
@@ -47,6 +54,16 @@ function filterByQuery(query, animalsArray) {
     return result;
   };
 
+  function createNewAnimal(body, animalsArray) {
+    const animal = body;
+    animalsArray.push(animal);
+    fs.writeFileSync(
+        path.join(__dirname, './data/animals.json'),
+        JSON.stringify({ animals: animalsArray }, null, 2)
+    );
+    return animal;
+  };
+
 app.get('/api/animals', (req, res) => {
     let results = animals;
     if (req.query) {
@@ -57,8 +74,21 @@ app.get('/api/animals', (req, res) => {
 
 app.get('/api/animals/:id', (req, res) => {
     const result = findById(req.params.id, animals);
-    res.json(result);
-})
+    if (result) {
+        res.json(result);
+    } else {
+        res.send(404);
+    }
+});
+
+app.post('/api/animals', (req, res) => {
+    req.body.id = animals.length.toString();
+
+    const animal = createNewAnimal(req.body, animals);
+
+    res.json(req.body);
+  });
+
 
 app.listen(3001, () => {
     console.log(`API server now on port 3001!`);
